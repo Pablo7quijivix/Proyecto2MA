@@ -1,31 +1,6 @@
 # Proyecto2MA
 
-Sistema de Gestión de Agenda de Contactos - Acceso Aleatorio y Estructura de Longitud FijaDescripción GeneralEl sistema es una aplicación de escritorio desarrollada en Python bajo una arquitectura modular estricta. Su propósito principal es la administración eficiente de registros de contactos mediante una estructura de almacenamiento binario de tamaño fijo, acceso aleatorio directo en tiempo constante $O(1)$ apoyado por una tabla hash en memoria y un índice primario JSON, control criptográfico de integridad, compresión de respaldos y una interfaz gráfica interactiva.Estructura y Arquitectura del ProyectoEl proyecto se organiza de manera modular para separar la lógica de negocio, la persistencia, la interfaz de usuario y las utilidades de exportación:proyecto_agenda/
-│
-├── main.py                          <-- Archivo principal de ejecución
-├── core/                            <-- Lógica de negocio y gestión del sistema
-│   ├── __init__.py
-│   ├── contact_manager.py           <-- Manejo de registros (100 bytes), acceso aleatorio, CRUD y SHA-256
-│   ├── index_manager.py             <-- Gestión de tabla hash en memoria y persistencia del índice en JSON
-│   └── exporter.py                  <-- Generación de reportes PDF de eficiencia y exportación JSON
-├── carga_de_datos/                  <-- Módulo de importación y carga masiva
-│   ├── __init__.py
-│   └── cargar_datos_propuestos.py   <-- Lógica de lectura, parseo y conversión de archivos externos (.txt, .csv)
-├── ui/                              <-- Interfaz gráfica de usuario
-│   ├── __init__.py
-│   └── main_window.py               <-- Ventana principal (Tkinter), pestañas, formularios, botones y visor tabular
-├── archivos_generados/              <-- Directorio de persistencia operativa del sistema
-│   ├── DAT/
-│   │   └── contactos.dat            <-- Archivo binario de registros de tamaño fijo
-│   ├── JSON/
-│   │   └── indice.json              <-- Archivo del índice primario
-│   ├── SHA256/
-│   │   └── contactos.sha256         <-- Hash de control de integridad criptográfica
-│   ├── PDF/                         <-- Reportes exportados
-│   └── ZIP/
-│       └── respaldo_agenda.zip      <-- Respaldo comprimido del sistema
-└── Eficiencia/                      <-- Documentación y métricas
-    └── reporte_eficiencia.pdf       <-- Reporte técnico de complejidad temporal y análisis Trade-Off
+Sistema de Gestión de Agenda de Contactos - Acceso Aleatorio y Estructura de Longitud FijaDescripción GeneralEl sistema es una aplicación de escritorio desarrollada en Python bajo una arquitectura modular estricta. Su propósito principal es la administración eficiente de registros de contactos mediante una estructura de almacenamiento binario de tamaño fijo, acceso aleatorio directo en tiempo constante $O(1)$ apoyado por una tabla hash en memoria y un índice primario JSON, control criptográfico de integridad, compresión de respaldos y una interfaz gráfica interactiva.Estructura y Arquitectura del ProyectoEl proyecto se organiza de manera modular para separar la lógica de negocio, la persistencia, la interfaz de usuario y las utilidades de exportación.
 Aspectos Técnicos y Teóricos
 1. Estructura de Registros de Tamaño FijoEl almacenamiento principal se realiza en el archivo binario archivos_generados/DAT/contactos.dat. Cada registro posee una longitud estrictamente constante de 100 bytes, distribuida de la siguiente manera:ID: 5 bytes (Identificador numérico único).Nombre: 30 bytes (Nombre completo del contacto).Teléfono: 15 bytes (Número telefónico de carácter exclusivamente numérico).Correo: 30 bytes (Dirección de correo electrónico).Ciudad: 20 bytes (Ubicación geográfica o ciudad).Los campos son formateados mediante normalización de texto y ajuste de relleno (ljust) para garantizar que la suma total sea constante, permitiendo el cálculo matemático exacto de las posiciones en disco.
    
