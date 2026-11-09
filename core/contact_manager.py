@@ -113,3 +113,94 @@ class ContactManager:
             "ciudad": data[self.TAMANO_ID+self.TAMANO_NOMBRE+self.TAMANO_TELEFONO+self.TAMANO_CORREO:].strip()
         }
         return contacto
+    
+    def modificar_contacto(self, id_val, nombre, telefono, correo, ciudad):
+        # Modifica un registro existente sobrescribiendo únicamente su posición exacta en el archivo.
+        num_reg = self.index_manager.buscar(id_val)
+        if num_reg is None:
+            raise ValueError(f"El ID {id_val} no existe.")
+
+        registro = self.serializar_registro(id_val, nombre, telefono, correo, ciudad)
+        with open(self.ruta_dat, "r+b") as f:
+            f.seek(num_reg * self.TAMANO_REGISTRO)
+            f.write(registro.encode('latin-1'))
+
+        self.actualizar_hash()
+
+    def eliminar_contacto(self, id_val):
+        # Elimina un contacto removiéndolo del índice primario y marcando su espacio en el archivo binario.
+        num_reg = self.index_manager.buscar(id_val)
+        if num_reg is None:
+            raise ValueError(f"El ID {id_val} no existe en el sistema.")
+
+        # Sobrescribe el registro en el archivo físico con espacios en blanco (anulación)
+        registro_vacio = " " * self.TAMANO_REGISTRO
+        with open(self.ruta_dat, "r+b") as f:
+            f.seek(num_reg * self.TAMANO_REGISTRO)
+            f.write(registro_vacio.encode('latin-1'))
+
+        # Elimina la entrada del índice JSON y actualiza el archivo de índice
+        if id_val in self.index_manager.indice:
+            del self.index_manager.indice[id_val]
+            self.index_manager.guardar_indice()
+
+        self.actualizar_hash()
+
+    def obtener_todos(self):
+        # Lee todos los registros válidos (no vacíos) del archivo mediante lectura binaria secuencial.
+        contactos = []
+        if not os.path.exists(self.ruta_dat):
+            return contactos
+        
+        with open(self.ruta_dat, "rb") as f:
+            while True:
+                data_bytes = f.read(self.TAMANO_REGISTRO)
+                if not data_bytes or len(data_bytes) < self.TAMANO_REGISTRO:
+                    break
+                data = data_bytes.decode('latin-1', errors='ignore')
+                
+                # Ignora registros vacíos o eliminados
+                id_str = data[:self.TAMANO_ID].strip()
+                if not id_str:
+                    continue
+
+                contacto = {
+                    "id": int(id_str),
+                    "nombre": data[self.TAMANO_ID:self.TAMANO_ID+self.TAMANO_NOMBRE].strip(),
+                    "telefono": data[self.TAMANO_ID+self.TAMANO_NOMBRE:self.TAMANO_ID+self.TAMANO_NOMBRE+self.TAMANO_TELEFONO].strip(),
+                    "correo": data[self.TAMANO_ID+self.TAMANO_NOMBRE+self.TAMANO_TELEFONO:self.TAMANO_ID+self.TAMANO_NOMBRE+self.TAMANO_TELEFONO+self.TAMANO_CORREO].strip(),
+                    "ciudad": data[self.TAMANO_ID+self.TAMANO_NOMBRE+self.TAMANO_TELEFONO+self.TAMANO_CORREO:].strip()
+                }
+                contactos.append(contacto)
+        return contactos
+
+    def crear_respaldo_zip(self):
+        # Crea un archivo ZIP comprimido conteniendo el archivo de datos y el índice.
+        ruta_zip = "archivos_generados/ZIP/respaldo_agenda.zip"
+        indice_path = self.index_manager.ruta_indice
+        
+        with zipfile.ZipFile(ruta_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            if os.path.exists(self.ruta_dat):
+                zipf.write(self.ruta_dat, os.path.basename(self.ruta_dat))
+            if os.path.exists(indice_path):
+                zipf.write(indice_path, os.path.basename(indice_path))
+                
+        tam_original = os.path.getsize(self.ruta_dat) if os.path.exists(self.ruta_dat) else 0
+        tam_comprimido = os.path.getsize(ruta_zip)
+        return ruta_zip, tam_original, tam_comprimido
+
+    def obtener_metadatos_archivo(self):
+        # Obtiene metadatos del archivo de datos.
+        if not os.path.exists(self.ruta_dat):
+            return {"error": "El archivo de datos no existe."}
+        
+        stats = os.stat(self.ruta_dat)
+        legible = os.access(self.ruta_dat, os.R_OK)
+        escribible = os.access(self.ruta_dat, os.W_OK)
+        
+        return {
+            "tamano_bytes": stats.st_size,
+            "ultima_modificacion": stats.st_mtime,
+            "lectura": legible,
+            "escritura": escribible
+        }
