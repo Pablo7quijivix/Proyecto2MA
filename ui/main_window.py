@@ -223,3 +223,112 @@ class MainApplication(tk.Tk):
                 raise ValueError("Ingrese el ID del contacto que desea eliminar.")
             
             id_val = int(texto_id)
+            
+            # Pide confirmación al usuario
+            confirmar = messagebox.askyesno("Confirmar Eliminación", f"¿Está seguro de eliminar el contacto con ID {id_val}?")
+            if not confirmar:
+                return
+
+            self.contact_manager.eliminar_contacto(id_val)
+            messagebox.showinfo("Éxito", f"Contacto con ID {id_val} eliminado correctamente.")
+            self.limpiar_campos()
+            self.cargar_tabla()
+        except Exception as e:
+            messagebox.showerror("Error de Eliminación", str(e))
+
+    def limpiar_campos(self):
+        # Vacía todas las cajas de texto de la interfaz para un nuevo ingreso.
+        for ent in self.entries.values():
+            ent.delete(0, tk.END)
+
+    def accion_cargar_datos(self):
+        # Abre un diálogo de archivos para seleccionar un archivo externo (.txt o .csv) y realizar la carga masiva.
+        ruta_archivo = filedialog.askopenfilename(
+            title="Seleccionar archivo de datos",
+            filetypes=[("Archivos de texto y CSV", "*.txt *.csv"), ("Todos los archivos", "*.*")]
+        )
+        if not ruta_archivo:
+            return
+
+        try:
+            cargados, errores = self.cargador_datos.procesar_archivo_externo(ruta_archivo)
+            msg = f"Se cargaron exitosamente {cargados} registros."
+            if errores:
+                msg += f"\n\nHubo {len(errores)} errores o registros duplicados omitidos."
+            messagebox.showinfo("Carga Masiva Finalizada", msg)
+            self.cargar_tabla()
+        except Exception as e:
+            messagebox.showerror("Error de Carga", f"Ocurrió un error al procesar el archivo:\n{str(e)}")
+
+    def construir_pestana_exportar(self):
+        # Diseña la pestaña de exportación.
+        frame = self.tab_exportar
+        lbl = tk.Label(frame, text="Opciones de Exportación", font=("Arial", 11, "bold"))
+        lbl.pack(pady=20)
+
+        btn_json = tk.Button(frame, text="Exportar a JSON", width=25, bg="#009688", fg="white", command=lambda: self.ejecutar_opcion_menu("exportar_json"))
+        btn_json.pack(pady=10)
+
+        btn_pdf = tk.Button(frame, text="Generar Reporte PDF", width=25, bg="#E91E63", fg="white", command=lambda: self.ejecutar_opcion_menu("exportar_pdf"))
+        btn_pdf.pack(pady=10)
+
+    def accion_exportar_json(self):
+        contactos = self.contact_manager.obtener_todos()
+        ruta = self.exporter.exportar_json(contactos)
+        messagebox.showinfo("Exportado", f"Archivo JSON generado exitosamente en:\n{ruta}")
+
+    def accion_exportar_pdf(self):
+        contactos = self.contact_manager.obtener_todos()
+        ruta = self.exporter.exportar_pdf(contactos)
+        messagebox.showinfo("Reporte PDF", f"Reporte PDF generado exitosamente en:\n{ruta}")
+
+    def construir_pestana_herramientas(self):
+        # Diseña la pestaña de herramientas.
+        frame = self.tab_herramientas
+        lbl = tk.Label(frame, text="Herramientas del Sistema", font=("Arial", 11, "bold"))
+        lbl.pack(pady=20)
+
+        btn_integ = tk.Button(frame, text="Verificar Integridad SHA-256", width=30, command=lambda: self.ejecutar_opcion_menu("verificar_integridad"))
+        btn_integ.pack(pady=8)
+
+        btn_zip = tk.Button(frame, text="Crear Respaldo ZIP", width=30, command=lambda: self.ejecutar_opcion_menu("respaldo_zip"))
+        btn_zip.pack(pady=8)
+
+        btn_info = tk.Button(frame, text="Información del Archivo", width=30, command=lambda: self.ejecutar_opcion_menu("info_archivo"))
+        btn_info.pack(pady=8)
+
+    def accion_verificar_integridad(self):
+        valido = self.contact_manager.verificar_integridad()
+        if valido:
+            messagebox.showinfo("Integridad OK", "El archivo de contactos es íntegro y no ha sido alterado.")
+        else:
+            messagebox.showwarning("Alerta", "El archivo ha sido modificado externamente.")
+
+    def accion_respaldo_zip(self):
+        ruta_zip, orig, comp = self.contact_manager.crear_respaldo_zip()
+        messagebox.showinfo("Respaldo Creado", f"Respaldo guardado en: {ruta_zip}\nTamaño original: {orig} bytes\nTamaño comprimido: {comp} bytes")
+
+    def accion_info_archivo(self):
+        meta = self.contact_manager.obtener_metadatos_archivo()
+        if "error" in meta:
+            messagebox.showerror("Error", meta["error"])
+        else:
+            msg = (f"Tamaño: {meta['tamano_bytes']} bytes\n"
+                   f"Última modificación: {meta['ultima_modificacion']}\n"
+                   f"Permiso de lectura: {'Sí' if meta['lectura'] else 'No'}\n"
+                   f"Permiso de escritura: {'Sí' if meta['escritura'] else 'No'}")
+            messagebox.showinfo("Información del Archivo", msg)
+
+    def construir_pestana_ayuda(self):
+        # Diseña la pestaña de ayuda.
+        frame = self.tab_ayuda
+        lbl = tk.Label(frame, text="Ayuda del Sistema (Simulado)", font=("Arial", 11, "bold"))
+        lbl.pack(pady=20)
+        txt = tk.Label(frame, text="Esta aplicación administra una agenda de contactos mediante\n"
+                                   "registros de tamaño fijo de 100 caracteres, acceso aleatorio seek(),\n"
+                                   "índice primario JSON, verificación SHA-256 y respaldos ZIP.\n\n"
+                                   "Para soporte adicional, contacte al administrador del sistema.", justify="center")
+        lbl_trade = tk.Label(frame, text="Sacrificado: Espacio adicional para índices y tablas hash.\n"
+                                         "Obteniendo: Búsqueda y acceso aleatorio en O(1).", font=("Arial", 9, "italic"), fg="#555")
+        txt.pack(pady=10)
+        lbl_trade.pack(pady=10)
